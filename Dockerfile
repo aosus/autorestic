@@ -1,9 +1,9 @@
 FROM golang:1.18-alpine as builder
 
 WORKDIR /app
-COPY go.* .
+COPY go.* ./
 RUN go mod download
-COPY . .
+COPY . ./
 RUN go build
 
 FROM alpine
