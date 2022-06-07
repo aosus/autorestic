@@ -7,7 +7,11 @@ COPY . ./
 RUN go build
 
 FROM alpine
-RUN apk add --no-cache restic rclone bash openssh
+RUN apk add --no-cache restic rclone bash openssh docker-cli
+RUN mkdir -p ~/.docker/cli-plugins && \
+    wget https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -O ~/.docker/cli-plugins/docker-compose && \
+    chmod +x ~/.docker/cli-plugins/docker-compose && \
+    docker compose version
 COPY --from=builder /app/autorestic /usr/bin/autorestic
 COPY entrypoint.sh /entrypoint.sh
 COPY crond.sh /crond.sh
