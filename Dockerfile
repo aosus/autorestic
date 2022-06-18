@@ -7,11 +7,21 @@ COPY . ./
 RUN go build
 
 FROM alpine
+ARG TARGETARCH
+
 RUN apk add --no-cache restic rclone bash openssh docker-cli
-RUN mkdir -p ~/.docker/cli-plugins && \
-    wget https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -O ~/.docker/cli-plugins/docker-compose && \
-    chmod +x ~/.docker/cli-plugins/docker-compose && \
-    docker compose version
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+        mkdir -p ~/.docker/cli-plugins && \
+        wget https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -O ~/.docker/cli-plugins/docker-compose && \
+        chmod +x ~/.docker/cli-plugins/docker-compose && \
+        docker compose version; \
+    else \
+        mkdir -p ~/.docker/cli-plugins && \
+        wget https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64 -O ~/.docker/cli-plugins/docker-compose && \
+        chmod +x ~/.docker/cli-plugins/docker-compose && \
+        docker compose version; \
+    fi 
+
 COPY --from=builder /app/autorestic /usr/bin/autorestic
 COPY entrypoint.sh /entrypoint.sh
 COPY crond.sh /crond.sh
