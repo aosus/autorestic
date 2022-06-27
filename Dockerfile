@@ -1,12 +1,34 @@
 FROM golang:1.18-alpine as builder
 
 WORKDIR /app
-COPY go.* .
+COPY go.* ./
 RUN go mod download
-COPY . .
+COPY . ./
 RUN go build
 
 FROM alpine
-RUN apk add --no-cache restic rclone bash openssh
+ARG TARGETARCH
+
+RUN apk add --no-cache restic rclone bash openssh docker-cli
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+        mkdir -p ~/.docker/cli-plugins && \
+        wget https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -O ~/.docker/cli-plugins/docker-compose && \
+        chmod +x ~/.docker/cli-plugins/docker-compose && \
+        docker compose version; \
+    else \
+        mkdir -p ~/.docker/cli-plugins && \
+        wget https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64 -O ~/.docker/cli-plugins/docker-compose && \
+        chmod +x ~/.docker/cli-plugins/docker-compose && \
+        docker compose version; \
+    fi 
+
 COPY --from=builder /app/autorestic /usr/bin/autorestic
-CMD [ "autorestic" ]
+COPY entrypoint.sh /entrypoint.sh
+COPY crond.sh /crond.sh
+RUN chmod +x /entrypoint.sh /crond.sh
+# show autorestic cron logs in docker
+RUN ln -sf /proc/1/fd/1 /var/log/autorestic-cron.log
+# run autorestic-cron every minute
+RUN echo -e "*/1 * * * * bash /crond.sh" >> /etc/crontabs/root
+
+CMD [ "/entrypoint.sh" ]
