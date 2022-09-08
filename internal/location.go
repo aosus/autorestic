@@ -74,12 +74,8 @@ func (l Location) validate() error {
 			if from, err := GetPathRelativeToConfig(path); err != nil {
 				return err
 			} else {
-				if stat, err := os.Stat(from); err != nil {
+				if _, err := os.Stat(from); err != nil {
 					return err
-				} else {
-					if !stat.IsDir() {
-						return fmt.Errorf("\"%s\" is not valid directory for location \"%s\"", from, l.name)
-					}
 				}
 			}
 		}
@@ -324,7 +320,12 @@ after:
 func (l Location) Forget(prune bool, dry bool) error {
 	colors.PrimaryPrint("Forgetting for location \"%s\"", l.name)
 
-	for _, to := range l.To {
+	backendsToForget := l.To
+	for _, copyBackends := range l.CopyOption {
+		backendsToForget = append(backendsToForget, copyBackends...)
+	}
+
+	for _, to := range backendsToForget {
 		backend, _ := GetBackend(to)
 		colors.Secondary.Printf("For backend \"%s\"\n", backend.name)
 		env, err := backend.getEnv()
